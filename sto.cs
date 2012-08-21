@@ -11,7 +11,7 @@ using System.Collections.Specialized;
 [assembly: AssemblyTitle("STO Parsing Plugin")]
 [assembly: AssemblyDescription("A basic parser that reads the combat logs in Star Trek Online")]
 [assembly: AssemblyCopyright("Aria@Abydos1")]
-[assembly: AssemblyVersion("0.9.0.0")]
+[assembly: AssemblyVersion("0.9.1.0")]
 
 namespace Parsing_Plugin
 {
@@ -77,10 +77,27 @@ namespace Parsing_Plugin
                 if (sourceDisplay == "" || sourceDisplay == "*") { sourceDisplay = ownerDisplay; sourceInternal = ownerInternal; }
                 if (targetDisplay == "" || targetDisplay == "*") { targetDisplay = sourceDisplay; targetInternal = sourceInternal; }
 
+                if (internalIsPlayer(ownerInternal)) ownerDisplay = getAccountName(ownerInternal);
+                if (internalIsPlayer(sourceInternal)) sourceDisplay = getAccountName(sourceInternal);
+                if (internalIsPlayer(targetInternal)) targetDisplay = getAccountName(targetInternal);
+
                 if (ownerDisplay == "")
                     ownerDisplay = "UNKNOWN";
 
                 logArgs = logInfo;
+            }
+
+            static public string getAccountName(string player)
+            {
+                int i = player.LastIndexOf('@');
+                if (i == -1)
+                    return player;
+                return player.Substring(i, player.Length - i - 1);
+            }
+
+            static public bool internalIsPlayer(string s)
+            {
+                return (s != "" && s[0] == 'P');
             }
 
             public bool isPetEvent()
