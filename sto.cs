@@ -7,15 +7,15 @@ using System.Text;
 using System.Globalization;
 using System.Collections;
 using System.Collections.Specialized;
+using System.Collections.Generic;
 
 [assembly: AssemblyTitle("STO Parsing Plugin")]
 [assembly: AssemblyDescription("A basic parser that reads the combat logs in Star Trek Online")]
 [assembly: AssemblyCopyright("Aria@Abydos1")]
-[assembly: AssemblyVersion("0.9.1.0")]
+[assembly: AssemblyVersion("0.9.2.0")]
 
 namespace Parsing_Plugin
 {
-
     public class STO_Parser : IActPluginV1
     {
 
@@ -280,9 +280,68 @@ namespace Parsing_Plugin
             // You should not use Before/AfterCombatAction as you may enter infinite loops. AfterLogLineRead is okay, but not recommended
             ActGlobals.oFormActMain.BeforeLogLineRead += new LogLineEventDelegate(oFormActMain_BeforeLogLineRead);
 
+            // copy data to clipboard
+            ActGlobals.oFormActMain.OnCombatEnd += new CombatToggleEventDelegate(oFormActMain_OnCombatEnd);
+
 
             lblStatus = pluginStatusText;
             lblStatus.Text = "STO ACT plugin loaded";
+        }
+
+        public class InvertedComparer : IComparer<int>
+        {
+            public int Compare(int x, int y)
+            {
+                return y.CompareTo(x);
+            }
+        }
+
+        public class dpsData : IComparable<dpsData>
+        {
+            public double encDPS;
+            public string name;
+
+            public dpsData(double dps, string n)
+            {
+                this.name = n;
+                this.encDPS = dps;
+            }
+
+            public int CompareTo(dpsData other)
+            {
+                // return reverse compare
+                return other.encDPS.CompareTo(this.encDPS);
+            }
+        }
+
+        void oFormActMain_OnCombatEnd(bool isImport, CombatToggleEventArgs encounterInfo)
+        {
+            try
+            {
+                List<CombatantData> allies = ActGlobals.oFormActMain.ZoneList[1].Items[0].GetAllies();
+
+                SortedSet<dpsData> players = new SortedSet<dpsData>();
+
+                string s = "Encounter DPS: ";
+                foreach (CombatantData c in allies)
+                {
+                    int i = c.Name.IndexOf('@');
+                    if (i != -1)
+                    {
+                        players.Add(new dpsData(c.EncDPS, c.Name));
+                    }
+                }
+                foreach (dpsData data in players)
+                {
+                    s += data.name + ": " + ((int)Math.Round(data.encDPS)) + ", ";
+                }
+
+                Clipboard.SetText(s);
+            }
+            catch (Exception e)
+            {
+                Clipboard.SetText("Encounter DPS: Error parsing clipboard data");
+            }
         }
 
         void oFormActMain_BeforeLogLineRead(bool isImport, LogLineEventArgs logInfo)
